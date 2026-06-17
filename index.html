@@ -4,21 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>多桌点餐记账</title>
-    
-    <!-- ✅ PWA 支持，iOS 主屏幕全屏 -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="点餐记账">
     <link rel="apple-touch-icon" href="icon-192.png">
-    
     <style>
         * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
         body { background: #f2f4f8; margin: 0; padding: 16px; min-height: 100vh; }
         .app-container { max-width: 1400px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
         .card { background: white; border-radius: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); padding: 24px; flex: 1 1 0; min-width: 0; }
-        .left-area { flex: 2; min-width: 260px; }
-        .right-area { flex: 3; min-width: 300px; display: flex; flex-direction: column; gap: 20px; }
+        .left-area { flex: 2; min-width: 280px; }
+        .right-area { flex: 3; min-width: 320px; display: flex; flex-direction: column; gap: 20px; }
         .order-section, .bill-section { width: 100%; }
         @media (max-width: 1024px) { .app-container { flex-direction: column; } .left-area, .right-area { flex: 1; width: 100%; } }
         h2 { font-size: 1.5rem; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #1e293b; }
@@ -26,10 +23,14 @@
         .table-btn { background: #eef2ff; border: none; border-radius: 30px; padding: 12px 20px; font-weight: 600; font-size: 1.1rem; cursor: pointer; min-width: 56px; text-align: center; touch-action: manipulation; }
         .table-btn.active { background: #2c7a4b; color: white; box-shadow: 0 2px 4px rgba(44,122,75,0.3); }
         .table-btn.has-order { border: 3px solid #f59e0b; }
-        .menu-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; max-height: 450px; overflow-y: auto; }
+        .category-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; margin: 0 0 12px 0; padding-bottom: 4px; }
+        .category-tab { background: #f1f5f9; border: none; border-radius: 30px; padding: 8px 18px; font-size: 0.95rem; font-weight: 500; cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+        .category-tab.active { background: #2c7a4b; color: white; }
+        .menu-grid { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; }
         .menu-item { background: #f8fafc; border-radius: 20px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
-        .menu-info { font-weight: 600; font-size: 1.1rem; }
-        .menu-price { color: #2c7a4b; font-weight: 700; margin-left: 10px; font-size: 1.1rem; }
+        .menu-info { display: flex; flex-direction: column; }
+        .menu-name { font-weight: 600; font-size: 1.1rem; }
+        .menu-price { color: #2c7a4b; font-weight: 700; margin-top: 2px; }
         button { background: #eef2ff; border: none; border-radius: 40px; padding: 10px 20px; font-size: 1rem; font-weight: 500; cursor: pointer; touch-action: manipulation; }
         button.primary { background: #2c7a4b; color: white; }
         button.primary:hover { background: #1f5a38; }
@@ -37,11 +38,14 @@
         button.danger:hover { background: #fecaca; }
         button.secondary { background: #e2e8f0; }
         .order-list, .bill-list { list-style: none; margin: 12px 0; padding: 0; max-height: 380px; overflow-y: auto; }
-        .order-item, .bill-item { background: #f9f9fc; border-radius: 18px; padding: 14px 18px; margin-bottom: 10px; border-left: 5px solid #2c7a4b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .order-item, .bill-item { background: #f9f9fc; border-radius: 18px; padding: 14px 18px; margin-bottom: 10px; border-left: 5px solid #2c7a4b; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
         .bill-item { border-left-color: #3b82f6; flex-direction: column; align-items: stretch; }
-        .order-details { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; font-size: 1.05rem; }
-        .order-controls { display: flex; gap: 8px; align-items: center; }
+        .order-details { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        .order-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+        .order-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
         .order-controls button { padding: 6px 14px; font-size: 1rem; min-width: 40px; }
+        .spiciness-badge { background: #fef3c7; border-radius: 16px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600; color: #92400e; }
+        .notes-text { font-size: 0.85rem; color: #475569; font-style: italic; }
         .total-row { border-top: 2px dashed #cbd5e1; padding-top: 14px; font-weight: bold; font-size: 1.4rem; text-align: right; display: flex; justify-content: space-between; margin-top: 8px; }
         .bill-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
         .stats { background: #e6f7ed; border-radius: 20px; padding: 8px 20px; font-weight: bold; font-size: 1.1rem; color: #14532d; }
@@ -53,10 +57,14 @@
         .table-actions button { flex: 1; min-width: 80px; text-align: center; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; max-width: 560px; width: 92%; border-radius: 32px; padding: 28px; max-height: 90vh; overflow-y: auto; }
-        .menu-editor-item { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
+        .menu-editor-item { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
         input, select { padding: 12px 16px; border-radius: 30px; border: 1px solid #ccc; flex: 1; font-size: 1rem; }
         hr { margin: 16px 0; }
         .replace-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 1.05rem; }
+        .flavor-group { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+        .flavor-btn { background: #f1f5f9; border: 2px solid transparent; border-radius: 30px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; }
+        .flavor-btn.selected { background: #fde68a; border-color: #f59e0b; }
+        .modal-input { width: 100%; padding: 12px 16px; border-radius: 30px; border: 1px solid #ccc; margin: 8px 0; font-size: 1rem; }
         @media (max-width: 820px) { .card { padding: 16px; } .table-btn { padding: 10px 16px; font-size: 1rem; } h2 { font-size: 1.3rem; } }
     </style>
 </head>
@@ -70,6 +78,7 @@
             <button id="cancelOrderBtn" class="danger">🗑 撤单</button>
             <button id="manageMenuBtn" class="manage-menu-btn">✏️ 管理菜品</button>
         </div>
+        <div class="category-tabs" id="categoryTabs"></div>
         <div id="menuListContainer" class="menu-grid"></div>
     </div>
     <div class="right-area">
@@ -93,110 +102,416 @@
     </div>
 </div>
 
-<!-- 模态框 -->
+<!-- 添加菜品口味选择模态框 -->
+<div id="addItemModal" class="modal">
+    <div class="modal-content">
+        <h3>➕ 添加 <span id="addItemName"></span></h3>
+        <div>
+            <strong>辣度（可选）</strong>
+            <div class="flavor-group" id="spicinessGroup">
+                <button class="flavor-btn" data-spice="不辣">不辣</button>
+                <button class="flavor-btn" data-spice="轻微辣">轻微辣</button>
+                <button class="flavor-btn" data-spice="微辣">微辣</button>
+                <button class="flavor-btn" data-spice="中辣">中辣</button>
+                <button class="flavor-btn" data-spice="麻辣">麻辣</button>
+            </div>
+        </div>
+        <input type="text" class="modal-input" id="addItemNote" placeholder="备注（如少油、去香菜）">
+        <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:16px;">
+            <button id="closeAddItemModalBtn">取消</button>
+            <button id="confirmAddItemBtn" class="primary">加入订单</button>
+        </div>
+    </div>
+</div>
+
+<!-- 管理菜品模态框 -->
 <div id="menuModal" class="modal"><div class="modal-content"><h3>🥗 编辑菜品</h3><div id="menuEditorList"></div><button id="addMenuItemBtn" style="background:#e9ecef; margin-top:8px; padding:10px 20px;">+ 添加新菜品</button><hr><div style="display:flex; justify-content:flex-end; gap:12px;"><button id="closeModalBtn" style="padding:10px 24px;">取消</button><button id="saveMenuBtn" class="primary" style="padding:10px 24px;">保存菜单</button></div></div></div>
+
+<!-- 换桌模态框 -->
 <div id="moveTableModal" class="modal"><div class="modal-content"><h3>🔄 换桌</h3><p style="font-size:1.1rem;">将当前 <strong id="moveFromTable"></strong> 桌的订单移动到目标桌：</p><select id="targetTableSelect" style="padding:12px 16px; font-size:1rem; width:100%;"></select><div style="margin-top:16px; display:flex; gap:12px; justify-content:flex-end;"><button id="closeMoveModalBtn" style="padding:10px 24px;">取消</button><button id="confirmMoveBtn" class="primary" style="padding:10px 24px;">确认移动</button></div></div></div>
+
+<!-- 撤单模态框 -->
 <div id="cancelModal" class="modal"><div class="modal-content"><h3>🗑 撤单</h3><p style="font-size:1.1rem;">确定撤销当前 <strong id="cancelTableDisplay"></strong> 桌的全部订单吗？</p><input type="text" id="cancelReason" placeholder="可选：填写撤单原因" style="width:100%; margin:8px 0; padding:12px 16px;"><div style="display:flex; gap:12px; justify-content:flex-end;"><button id="closeCancelModalBtn" style="padding:10px 24px;">取消</button><button id="confirmCancelBtn" class="danger" style="padding:10px 24px;">确认撤单</button></div></div></div>
+
+<!-- 更换菜品模态框 -->
 <div id="replaceModal" class="modal"><div class="modal-content"><h3>🔄 更换菜品</h3><p style="font-size:1.1rem;">将 <strong id="replaceOldName"></strong> 更换为：</p><div id="replaceMenuList"></div><div style="margin-top:16px; display:flex; gap:12px; justify-content:flex-end;"><button id="closeReplaceModalBtn" style="padding:10px 24px;">取消</button></div></div></div>
 
 <script>
-let menu = [], tableOrders = {}, bills = [], currentTable = '1', replaceTarget = null;
-const SK = { MENU: 'multi_table_menu', TABLE_ORDERS: 'multi_table_orders', BILLS: 'multi_table_bills' };
+// ---------- 数据 ----------
+let menu = [];
+let tableOrders = {};
+let bills = [];
+let currentTable = '1';
+let currentCategory = 'all';
+let replaceTarget = null;
+let pendingMenuItem = null; // 待添加的菜品信息
+
+const SK = { MENU: 'multi_table_menu_v2', TABLE_ORDERS: 'multi_table_orders_v2', BILLS: 'multi_table_bills_v2' };
+
+const DEFAULT_MENU = [
+    // 饮料系列
+    { id:'1', name:'饮料1', price:2, category:'饮料系列' },
+    { id:'2', name:'饮料2', price:3, category:'饮料系列' },
+    { id:'3', name:'饮料3', price:4, category:'饮料系列' },
+    { id:'4', name:'饮料4', price:5, category:'饮料系列' },
+    { id:'5', name:'饮料5', price:6, category:'饮料系列' },
+    { id:'6', name:'饮料6', price:10, category:'饮料系列' },
+    // 海鲜系列
+    { id:'7', name:'花甲', price:25, category:'海鲜系列' },
+    { id:'8', name:'蛏子', price:35, category:'海鲜系列' },
+    { id:'9', name:'钉螺', price:35, category:'海鲜系列' },
+    { id:'10', name:'海螺', price:25, category:'海鲜系列' },
+    { id:'11', name:'鱿鱼须（小）', price:35, category:'海鲜系列' },
+    { id:'12', name:'鱿鱼须（大）', price:70, category:'海鲜系列' },
+    { id:'13', name:'虾尾（小）', price:50, category:'海鲜系列' },
+    { id:'14', name:'虾尾（大）', price:80, category:'海鲜系列' },
+    { id:'15', name:'基围虾', price:45, category:'海鲜系列' },
+    { id:'16', name:'墨鱼仔', price:40, category:'海鲜系列' },
+    { id:'17', name:'清蒸花甲', price:25, category:'海鲜系列' },
+    { id:'18', name:'清蒸蛏子', price:35, category:'海鲜系列' },
+    { id:'19', name:'蟹钳', price:50, category:'海鲜系列' },
+    { id:'20', name:'扇贝肉', price:50, category:'海鲜系列' },
+    { id:'21', name:'清蒸大闸蟹（小）', price:60, category:'海鲜系列' },
+    { id:'22', name:'清蒸大闸蟹（大）', price:95, category:'海鲜系列' },
+    { id:'23', name:'清蒸生蚝（小5只）', price:30, category:'海鲜系列' },
+    { id:'24', name:'清蒸生蚝（大8只）', price:48, category:'海鲜系列' },
+    // 素菜系列
+    { id:'25', name:'土豆', price:12, category:'素菜系列' },
+    { id:'26', name:'娃娃菜', price:12, category:'素菜系列' },
+    { id:'27', name:'黄豆芽', price:12, category:'素菜系列' },
+    { id:'28', name:'豆腐', price:12, category:'素菜系列' },
+    { id:'29', name:'豆腐皮', price:12, category:'素菜系列' },
+    { id:'30', name:'海带丝', price:12, category:'素菜系列' },
+    { id:'31', name:'金针菇', price:15, category:'素菜系列' },
+    { id:'32', name:'香菇', price:20, category:'素菜系列' },
+    { id:'33', name:'蟹味菇', price:20, category:'素菜系列' },
+    { id:'34', name:'双拼', price:15, category:'素菜系列' },
+    { id:'35', name:'三拼', price:18, category:'素菜系列' },
+    { id:'36', name:'菌类大拼', price:20, category:'素菜系列' },
+    { id:'37', name:'鸭血豆芽', price:15, category:'素菜系列' },
+    { id:'38', name:'土豆粉', price:15, category:'素菜系列' },
+    { id:'39', name:'川粉', price:15, category:'素菜系列' },
+    // 肉类系列
+    { id:'40', name:'酥肉', price:40, category:'肉类系列' },
+    { id:'41', name:'鸡腿', price:30, category:'肉类系列' },
+    { id:'42', name:'脆皮肠', price:25, category:'肉类系列' },
+    { id:'43', name:'蟹黄包', price:30, category:'肉类系列' },
+    // 面类系列
+    { id:'44', name:'方便面', price:2, category:'面类系列' },
+    { id:'45', name:'粉丝', price:2, category:'面类系列' },
+    { id:'46', name:'烩面', price:2, category:'面类系列' },
+    { id:'47', name:'青菜', price:2, category:'面类系列' },
+    // 凉调系列
+    { id:'48', name:'芥末黄瓜', price:12, category:'凉调系列' },
+    { id:'49', name:'小番茄', price:12, category:'凉调系列' },
+    { id:'50', name:'花生米', price:5, category:'凉调系列' }
+];
+
+// 所有分类（用于标签和编辑器下拉）
+const ALL_CATEGORIES = ['饮料系列','海鲜系列','素菜系列','肉类系列','面类系列','凉调系列'];
+
 function saveMenu() { localStorage.setItem(SK.MENU, JSON.stringify(menu)); }
 function saveTableOrders() { localStorage.setItem(SK.TABLE_ORDERS, JSON.stringify(tableOrders)); }
 function saveBills() { localStorage.setItem(SK.BILLS, JSON.stringify(bills)); }
+
 function loadData() {
     const sm = localStorage.getItem(SK.MENU);
-    if (sm) { menu = JSON.parse(sm); } else { menu = [{ id: '1', name: '番茄炒蛋', price: 22 }, { id: '2', name: '宫保鸡丁', price: 38 }, { id: '3', name: '酸辣土豆丝', price: 16 }, { id: '4', name: '米饭', price: 3 }]; saveMenu(); }
+    if (sm) {
+        menu = JSON.parse(sm);
+    } else {
+        menu = DEFAULT_MENU.map(m => ({...m}));
+        saveMenu();
+    }
     const so = localStorage.getItem(SK.TABLE_ORDERS);
     if (so) { tableOrders = JSON.parse(so); } else { tableOrders = {}; saveTableOrders(); }
     const sb = localStorage.getItem(SK.BILLS);
     if (sb) { bills = JSON.parse(sb); } else { bills = []; saveBills(); }
 }
+
 function getCurrentOrder() { return tableOrders[currentTable] || []; }
-function setCurrentOrder(o) { if (o && o.length > 0) { tableOrders[currentTable] = o; } else { delete tableOrders[currentTable]; } saveTableOrders(); renderAll(); }
-function getTableOrder(t) { return tableOrders[t] || []; }
-function renderAll() { renderTableSelector(); renderMenu(); renderOrder(); renderBills(); updateTotalRevenue(); document.getElementById('currentTableDisplay').innerText = '(' + currentTable + '号桌)'; }
-function renderTableSelector() {
-    const c = document.getElementById('tableSelector'); let h = '';
-    for (let i = 1; i <= 20; i++) { const k = String(i); const has = tableOrders[k] && tableOrders[k].length > 0; const act = k === currentTable ? 'active' : ''; const hc = has ? 'has-order' : ''; h += '<button class="table-btn ' + act + ' ' + hc + '" data-table="' + k + '">' + i + '</button>'; }
-    c.innerHTML = h;
-    c.querySelectorAll('.table-btn').forEach(b => { b.addEventListener('click', function() { currentTable = this.dataset.table; renderAll(); }); });
+function setCurrentOrder(o) {
+    if (o && o.length > 0) { tableOrders[currentTable] = o; }
+    else { delete tableOrders[currentTable]; }
+    saveTableOrders();
+    renderAll();
 }
+function getTableOrder(t) { return tableOrders[t] || []; }
+
+// 分类列表获取
+function getCategories() {
+    const cats = new Set(menu.map(i => i.category || '未分类'));
+    return Array.from(cats);
+}
+
+// ---------- 渲染 ----------
+function renderAll() {
+    renderTableSelector();
+    renderCategoryTabs();
+    renderMenu();
+    renderOrder();
+    renderBills();
+    updateTotalRevenue();
+    document.getElementById('currentTableDisplay').innerText = '(' + currentTable + '号桌)';
+}
+
+function renderTableSelector() {
+    const c = document.getElementById('tableSelector');
+    let h = '';
+    for (let i = 1; i <= 20; i++) {
+        const k = String(i);
+        const has = tableOrders[k] && tableOrders[k].length > 0;
+        const act = k === currentTable ? 'active' : '';
+        const hc = has ? 'has-order' : '';
+        h += `<button class="table-btn ${act} ${hc}" data-table="${k}">${i}</button>`;
+    }
+    c.innerHTML = h;
+    c.querySelectorAll('.table-btn').forEach(b => {
+        b.addEventListener('click', function() {
+            currentTable = this.dataset.table;
+            renderAll();
+        });
+    });
+}
+
+function renderCategoryTabs() {
+    const container = document.getElementById('categoryTabs');
+    const cats = getCategories();
+    let html = `<button class="category-tab ${currentCategory==='all'?'active':''}" data-cat="all">全部</button>`;
+    cats.forEach(cat => {
+        html += `<button class="category-tab ${currentCategory===cat?'active':''}" data-cat="${esc(cat)}">${esc(cat)}</button>`;
+    });
+    container.innerHTML = html;
+    container.querySelectorAll('.category-tab').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentCategory = this.dataset.cat;
+            renderCategoryTabs();
+            renderMenu();
+        });
+    });
+}
+
 function renderMenu() {
     const c = document.getElementById('menuListContainer');
-    if (!c) return;
-    if (menu.length === 0) { c.innerHTML = '<div class="empty-msg">暂无菜品</div>'; return; }
-    c.innerHTML = menu.map(function(item) { return '<div class="menu-item"><div><span class="menu-info">' + esc(item.name) + '</span><span class="menu-price">¥' + item.price + '</span></div><button class="add-to-order" data-id="' + item.id + '" data-name="' + esc(item.name) + '" data-price="' + item.price + '" style="padding:8px 18px;">+ 点餐</button></div>'; }).join('');
-    c.querySelectorAll('.add-to-order').forEach(function(b) { b.addEventListener('click', function() { addToOrder(this.dataset.id, this.dataset.name, parseFloat(this.dataset.price)); }); });
+    let filtered = menu;
+    if (currentCategory !== 'all') {
+        filtered = menu.filter(item => (item.category || '未分类') === currentCategory);
+    }
+    if (filtered.length === 0) {
+        c.innerHTML = '<div class="empty-msg">该分类暂无菜品</div>';
+        return;
+    }
+    c.innerHTML = filtered.map(item => {
+        return `<div class="menu-item">
+            <div class="menu-info">
+                <span class="menu-name">${esc(item.name)}</span>
+                <span class="menu-price">¥${item.price}</span>
+            </div>
+            <button class="add-item-trigger" data-id="${item.id}" data-name="${esc(item.name)}" data-price="${item.price}" style="padding:8px 18px;">+ 点餐</button>
+        </div>`;
+    }).join('');
+    c.querySelectorAll('.add-item-trigger').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const name = this.dataset.name;
+            const price = parseFloat(this.dataset.price);
+            openAddItemModal(id, name, price);
+        });
+    });
 }
-function addToOrder(id, name, price) {
-    var o = getCurrentOrder();
-    var ex = o.find(function(i) { return i.menuItemId === id; });
-    if (ex) { ex.quantity += 1; } else { o.push({ menuItemId: id, name: name, price: price, quantity: 1 }); }
+
+// ---------- 添加菜品（带口味/备注） ----------
+function openAddItemModal(id, name, price) {
+    pendingMenuItem = { id, name, price };
+    document.getElementById('addItemName').innerText = name;
+    document.getElementById('addItemNote').value = '';
+    // 重置口味选择
+    const flavorBtns = document.querySelectorAll('#spicinessGroup .flavor-btn');
+    flavorBtns.forEach(b => b.classList.remove('selected'));
+    // 默认选中第一个（不辣）
+    flavorBtns[0].classList.add('selected');
+    document.getElementById('addItemModal').style.display = 'flex';
+}
+
+function closeAddItemModal() {
+    document.getElementById('addItemModal').style.display = 'none';
+    pendingMenuItem = null;
+}
+
+function confirmAddItem() {
+    if (!pendingMenuItem) return;
+    const selectedFlavor = document.querySelector('#spicinessGroup .flavor-btn.selected');
+    const spiciness = selectedFlavor ? selectedFlavor.dataset.spice : '不辣';
+    const notes = document.getElementById('addItemNote').value.trim();
+    const o = getCurrentOrder();
+    // 不合并不同口味/备注的项，每次都新建一个条目（避免混乱）
+    o.push({
+        menuItemId: pendingMenuItem.id,
+        name: pendingMenuItem.name,
+        price: pendingMenuItem.price,
+        quantity: 1,
+        spiciness: spiciness,
+        notes: notes
+    });
     setCurrentOrder(o);
+    closeAddItemModal();
+    renderAll();
 }
+
+// ---------- 订单渲染 ----------
 function renderOrder() {
-    var c = document.getElementById('orderItemsList');
-    var ts = document.getElementById('orderTotal');
-    var o = getCurrentOrder();
-    if (!o || o.length === 0) { c.innerHTML = '<div class="empty-msg">暂无点餐</div>'; ts.innerText = '0.00'; return; }
-    var total = 0;
-    var html = o.map(function(item, index) {
-        var sub = item.price * item.quantity;
+    const c = document.getElementById('orderItemsList');
+    const ts = document.getElementById('orderTotal');
+    const o = getCurrentOrder();
+    if (!o || o.length === 0) {
+        c.innerHTML = '<div class="empty-msg">暂无点餐</div>';
+        ts.innerText = '0.00';
+        return;
+    }
+    let total = 0;
+    let html = o.map((item, index) => {
+        const sub = item.price * item.quantity;
         total += sub;
-        return '<div class="order-item" data-index="' + index + '"><div class="order-details"><strong>' + esc(item.name) + '</strong> x ' + item.quantity + ' <span style="font-weight:bold;">¥' + sub.toFixed(2) + '</span></div><div class="order-controls"><button class="order-dec" data-index="' + index + '">−</button><span style="min-width:32px;text-align:center;font-weight:bold;">' + item.quantity + '</span><button class="order-inc" data-index="' + index + '">+</button><button class="order-replace" data-index="' + index + '" style="background:#dbeafe;">🔄</button><button class="order-remove" data-index="' + index + '" style="background:#fee2e2;color:#b91c1c;">✖</button></div></div>';
+        let flavorHtml = item.spiciness && item.spiciness !== '不辣' ? `<span class="spiciness-badge">🌶 ${esc(item.spiciness)}</span>` : '';
+        let notesHtml = item.notes ? `<span class="notes-text">📝 ${esc(item.notes)}</span>` : '';
+        return `<div class="order-item" data-index="${index}">
+            <div class="order-details">
+                <div class="order-title">
+                    <strong>${esc(item.name)}</strong> x ${item.quantity}
+                    ${flavorHtml}
+                </div>
+                ${notesHtml}
+                <span style="font-weight:bold; margin-top:2px;">¥${sub.toFixed(2)}</span>
+            </div>
+            <div class="order-controls">
+                <button class="order-dec" data-index="${index}">−</button>
+                <span style="min-width:32px;text-align:center;font-weight:bold;">${item.quantity}</span>
+                <button class="order-inc" data-index="${index}">+</button>
+                <button class="order-replace" data-index="${index}" style="background:#dbeafe;">🔄</button>
+                <button class="order-remove" data-index="${index}" style="background:#fee2e2;color:#b91c1c;">✖</button>
+            </div>
+        </div>`;
     }).join('');
     c.innerHTML = html;
     ts.innerText = total.toFixed(2);
-    c.querySelectorAll('.order-dec').forEach(function(b) { b.addEventListener('click', function() { updateQuantity(parseInt(this.dataset.index), -1); }); });
-    c.querySelectorAll('.order-inc').forEach(function(b) { b.addEventListener('click', function() { updateQuantity(parseInt(this.dataset.index), 1); }); });
-    c.querySelectorAll('.order-remove').forEach(function(b) { b.addEventListener('click', function() { removeItem(parseInt(this.dataset.index)); }); });
-    c.querySelectorAll('.order-replace').forEach(function(b) { b.addEventListener('click', function() { openReplaceModal(parseInt(this.dataset.index)); }); });
+    c.querySelectorAll('.order-dec').forEach(b => b.addEventListener('click', function() { updateQuantity(parseInt(this.dataset.index), -1); }));
+    c.querySelectorAll('.order-inc').forEach(b => b.addEventListener('click', function() { updateQuantity(parseInt(this.dataset.index), 1); }));
+    c.querySelectorAll('.order-remove').forEach(b => b.addEventListener('click', function() { removeItem(parseInt(this.dataset.index)); }));
+    c.querySelectorAll('.order-replace').forEach(b => b.addEventListener('click', function() { openReplaceModal(parseInt(this.dataset.index)); }));
 }
-function updateQuantity(idx, delta) { var o = getCurrentOrder(); if (!o[idx]) return; var n = o[idx].quantity + delta; if (n <= 0) { o.splice(idx, 1); } else { o[idx].quantity = n; } setCurrentOrder(o); }
-function removeItem(idx) { var o = getCurrentOrder(); o.splice(idx, 1); setCurrentOrder(o); }
+
+function updateQuantity(idx, delta) {
+    const o = getCurrentOrder();
+    if (!o[idx]) return;
+    const n = o[idx].quantity + delta;
+    if (n <= 0) { o.splice(idx, 1); }
+    else { o[idx].quantity = n; }
+    setCurrentOrder(o);
+}
+
+function removeItem(idx) {
+    const o = getCurrentOrder();
+    o.splice(idx, 1);
+    setCurrentOrder(o);
+}
+
+// ---------- 结账 ----------
 function checkout() {
-    var o = getCurrentOrder();
+    const o = getCurrentOrder();
     if (!o || o.length === 0) { alert('当前桌没有点餐'); return; }
-    var total = o.reduce(function(s, i) { return s + i.price * i.quantity; }, 0);
-    var nb = { id: Date.now().toString(), dateTime: new Date().toLocaleString(), table: currentTable, items: JSON.parse(JSON.stringify(o)), total: total };
-    bills.unshift(nb); saveBills();
-    delete tableOrders[currentTable]; saveTableOrders();
+    const total = o.reduce((s, i) => s + i.price * i.quantity, 0);
+    const nb = {
+        id: Date.now().toString(),
+        dateTime: new Date().toLocaleString(),
+        table: currentTable,
+        items: JSON.parse(JSON.stringify(o)),
+        total: total
+    };
+    bills.unshift(nb);
+    saveBills();
+    delete tableOrders[currentTable];
+    saveTableOrders();
     renderAll();
 }
+
+// ---------- 账单 ----------
 function renderBills() {
-    var c = document.getElementById('billListContainer');
-    if (bills.length === 0) { c.innerHTML = '<div class="empty-msg">暂无账单</div>'; return; }
-    var html = bills.map(function(bill) {
-        var itemsStr = bill.items.map(function(it) { return it.name + ' x' + it.quantity; }).join('、');
-        return '<div class="bill-item"><div style="display:flex;justify-content:space-between;width:100%;"><span style="font-size:0.9rem;color:#4b5563;">🕒 ' + bill.dateTime + '  ·  ' + bill.table + '号桌</span><button class="delete-bill" data-id="' + bill.id + '" style="background:transparent;color:#b91c1c;padding:4px 12px;font-size:1rem;">✖ 删除</button></div><div style="font-size:1rem;">' + esc(itemsStr) + '</div><div style="font-weight:bold;text-align:right;font-size:1.2rem;">¥' + bill.total.toFixed(2) + '</div></div>';
+    const c = document.getElementById('billListContainer');
+    if (bills.length === 0) {
+        c.innerHTML = '<div class="empty-msg">暂无账单</div>';
+        return;
+    }
+    let html = bills.map(bill => {
+        const itemsStr = bill.items.map(it => {
+            let extra = '';
+            if (it.spiciness && it.spiciness !== '不辣') extra += ` (${it.spiciness})`;
+            if (it.notes) extra += ` [${it.notes}]`;
+            return it.name + extra + ' x' + it.quantity;
+        }).join('、');
+        return `<div class="bill-item">
+            <div style="display:flex;justify-content:space-between;width:100%;">
+                <span style="font-size:0.9rem;color:#4b5563;">🕒 ${bill.dateTime}  ·  ${bill.table}号桌</span>
+                <button class="delete-bill" data-id="${bill.id}" style="background:transparent;color:#b91c1c;padding:4px 12px;font-size:1rem;">✖ 删除</button>
+            </div>
+            <div style="font-size:1rem;">${esc(itemsStr)}</div>
+            <div style="font-weight:bold;text-align:right;font-size:1.2rem;">¥${bill.total.toFixed(2)}</div>
+        </div>`;
     }).join('');
     c.innerHTML = html;
-    c.querySelectorAll('.delete-bill').forEach(function(b) { b.addEventListener('click', function() { bills = bills.filter(function(x) { return x.id !== this.dataset.id; }.bind(this)); saveBills(); renderBills(); updateTotalRevenue(); }); });
+    c.querySelectorAll('.delete-bill').forEach(b => {
+        b.addEventListener('click', function() {
+            bills = bills.filter(x => x.id !== this.dataset.id);
+            saveBills();
+            renderBills();
+            updateTotalRevenue();
+        });
+    });
 }
-function updateTotalRevenue() { var t = bills.reduce(function(s, b) { return s + b.total; }, 0); document.getElementById('totalRevenueDisplay').innerText = '总收入: ¥' + t.toFixed(2); }
-function clearCurrentTable() { var o = getCurrentOrder(); if (!o || o.length === 0) return alert('当前桌无订单'); if (confirm('确定清空 ' + currentTable + ' 号桌的全部订单吗？')) { delete tableOrders[currentTable]; saveTableOrders(); renderAll(); } }
-function openMoveTable() {
-    var o = getCurrentOrder();
+
+function updateTotalRevenue() {
+    const t = bills.reduce((s, b) => s + b.total, 0);
+    document.getElementById('totalRevenueDisplay').innerText = '总收入: ¥' + t.toFixed(2);
+}
+
+// ---------- 清空/移动/撤单 ----------
+function clearCurrentTable() {
+    const o = getCurrentOrder();
+    if (!o || o.length === 0) return alert('当前桌无订单');
+    if (confirm('确定清空 ' + currentTable + ' 号桌的全部订单吗？')) {
+        delete tableOrders[currentTable];
+        saveTableOrders();
+        renderAll();
+    }
+}
+
+function openMoveTable() { /* 原逻辑不变 */ 
+    const o = getCurrentOrder();
     if (!o || o.length === 0) { alert('当前桌没有订单可移动'); return; }
     document.getElementById('moveFromTable').innerText = currentTable;
-    var sel = document.getElementById('targetTableSelect'); sel.innerHTML = '';
-    for (var i = 1; i <= 20; i++) { var k = String(i); if (k === currentTable) continue; var opt = document.createElement('option'); opt.value = k; opt.textContent = i + '号桌' + (tableOrders[k] && tableOrders[k].length > 0 ? ' (已有订单)' : ''); sel.appendChild(opt); }
+    const sel = document.getElementById('targetTableSelect');
+    sel.innerHTML = '';
+    for (let i = 1; i <= 20; i++) {
+        const k = String(i);
+        if (k === currentTable) continue;
+        const opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = i + '号桌' + (tableOrders[k] && tableOrders[k].length > 0 ? ' (已有订单)' : '');
+        sel.appendChild(opt);
+    }
     document.getElementById('moveTableModal').style.display = 'flex';
 }
-function confirmMove() {
-    var target = document.getElementById('targetTableSelect').value;
+function confirmMove() { /* 原逻辑不变 */
+    const target = document.getElementById('targetTableSelect').value;
     if (!target) return alert('请选择目标桌号');
-    var cur = getCurrentOrder();
-    if (!cur || cur.length === 0) { alert('当前桌无订单'); closeMoveModal(); return; }
-    var tar = getTableOrder(target);
-    var merged = tar.slice();
-    cur.forEach(function(item) {
-        var ex = merged.find(function(i) { return i.menuItemId === item.menuItemId; });
-        if (ex) { ex.quantity += item.quantity; } else { merged.push({ menuItemId: item.menuItemId, name: item.name, price: item.price, quantity: item.quantity }); }
+    const cur = getCurrentOrder();
+    if (!cur || cur.length === 0) { closeMoveModal(); return; }
+    let tar = getTableOrder(target).slice();
+    cur.forEach(item => {
+        // 简单合并（相同菜品且口味备注相同才合并）
+        const exist = tar.find(t => t.menuItemId === item.menuItemId && t.spiciness === item.spiciness && t.notes === item.notes);
+        if (exist) { exist.quantity += item.quantity; }
+        else { tar.push({...item}); }
     });
-    tableOrders[target] = merged;
+    tableOrders[target] = tar;
     delete tableOrders[currentTable];
     saveTableOrders();
     currentTable = target;
@@ -204,15 +519,16 @@ function confirmMove() {
     renderAll();
 }
 function closeMoveModal() { document.getElementById('moveTableModal').style.display = 'none'; }
+
 function openCancel() {
-    var o = getCurrentOrder();
+    const o = getCurrentOrder();
     if (!o || o.length === 0) { alert('当前桌没有订单可撤'); return; }
     document.getElementById('cancelTableDisplay').innerText = currentTable;
     document.getElementById('cancelReason').value = '';
     document.getElementById('cancelModal').style.display = 'flex';
 }
 function confirmCancel() {
-    var reason = document.getElementById('cancelReason').value.trim() || '无原因';
+    const reason = document.getElementById('cancelReason').value.trim() || '无原因';
     delete tableOrders[currentTable];
     saveTableOrders();
     alert('已撤消 ' + currentTable + ' 号桌订单，原因：' + reason);
@@ -220,27 +536,34 @@ function confirmCancel() {
     renderAll();
 }
 function closeCancelModal() { document.getElementById('cancelModal').style.display = 'none'; }
+
+// ---------- 更换菜品（保留口味备注） ----------
 function openReplaceModal(idx) {
-    var o = getCurrentOrder();
+    const o = getCurrentOrder();
     if (!o[idx]) return;
     replaceTarget = { table: currentTable, index: idx };
     document.getElementById('replaceOldName').innerText = o[idx].name;
-    var c = document.getElementById('replaceMenuList');
-    c.innerHTML = menu.map(function(item) {
+    const c = document.getElementById('replaceMenuList');
+    c.innerHTML = menu.map(item => {
         if (item.id === o[idx].menuItemId) return '';
-        return '<div class="replace-item"><span>' + esc(item.name) + ' (¥' + item.price + ')</span><button class="replace-select" data-id="' + item.id + '" data-name="' + esc(item.name) + '" data-price="' + item.price + '" style="padding:6px 18px;">选择</button></div>';
+        return `<div class="replace-item"><span>${esc(item.name)} (¥${item.price})</span><button class="replace-select" data-id="${item.id}" data-name="${esc(item.name)}" data-price="${item.price}" style="padding:6px 18px;">选择</button></div>`;
     }).join('');
     document.getElementById('replaceModal').style.display = 'flex';
-    c.querySelectorAll('.replace-select').forEach(function(b) { b.addEventListener('click', function() { confirmReplace(this.dataset.id, this.dataset.name, parseFloat(this.dataset.price)); }); });
+    c.querySelectorAll('.replace-select').forEach(b => {
+        b.addEventListener('click', function() {
+            confirmReplace(this.dataset.id, this.dataset.name, parseFloat(this.dataset.price));
+        });
+    });
 }
 function confirmReplace(nid, nname, nprice) {
     if (!replaceTarget) return;
-    var o = getTableOrder(replaceTarget.table);
+    const o = getTableOrder(replaceTarget.table);
     if (!o[replaceTarget.index]) return;
     if (o[replaceTarget.index].menuItemId === nid) { alert('已选择相同菜品'); closeReplaceModal(); return; }
-    var old = o[replaceTarget.index];
-    var exi = o.findIndex(function(item, idx) { return idx !== replaceTarget.index && item.menuItemId === nid; });
-    if (exi !== -1) { o[exi].quantity += old.quantity; o.splice(replaceTarget.index, 1); } else { o[replaceTarget.index] = { menuItemId: nid, name: nname, price: nprice, quantity: old.quantity }; }
+    o[replaceTarget.index].menuItemId = nid;
+    o[replaceTarget.index].name = nname;
+    o[replaceTarget.index].price = nprice;
+    // 保留辣度、备注、数量不变
     tableOrders[replaceTarget.table] = o;
     saveTableOrders();
     closeReplaceModal();
@@ -248,41 +571,60 @@ function confirmReplace(nid, nname, nprice) {
     renderAll();
 }
 function closeReplaceModal() { document.getElementById('replaceModal').style.display = 'none'; replaceTarget = null; }
+
+// ---------- 管理菜品（支持分类编辑） ----------
 function openMenuModal() { renderMenuEditor(); document.getElementById('menuModal').style.display = 'flex'; }
 function renderMenuEditor() {
-    var ed = document.getElementById('menuEditorList');
-    ed.innerHTML = menu.map(function(item) {
-        return '<div class="menu-editor-item" data-id="' + item.id + '"><input type="text" class="edit-name" value="' + esc(item.name) + '" placeholder="菜名"><input type="number" class="edit-price" value="' + item.price + '" step="0.5" placeholder="价格"><button class="remove-menu-item" data-id="' + item.id + '" style="background:#fecaca;padding:8px 14px;">删除</button></div>';
+    const ed = document.getElementById('menuEditorList');
+    ed.innerHTML = menu.map(item => {
+        return `<div class="menu-editor-item" data-id="${item.id}">
+            <input type="text" class="edit-name" value="${esc(item.name)}" placeholder="菜名" style="flex:2;">
+            <input type="number" class="edit-price" value="${item.price}" step="0.5" placeholder="价格" style="flex:1;">
+            <input type="text" class="edit-category" value="${esc(item.category||'')}" placeholder="分类" list="category-list" style="flex:1.5;">
+            <datalist id="category-list">
+                ${ALL_CATEGORIES.map(c => `<option value="${c}">`).join('')}
+            </datalist>
+            <button class="remove-menu-item" data-id="${item.id}" style="background:#fecaca;padding:8px 14px;">删除</button>
+        </div>`;
     }).join('');
-    ed.querySelectorAll('.remove-menu-item').forEach(function(b) {
+    ed.querySelectorAll('.remove-menu-item').forEach(b => {
         b.addEventListener('click', function() {
-            var id = this.dataset.id;
-            for (var t in tableOrders) { if (tableOrders[t].some(function(i) { return i.menuItemId === id; })) { alert('该菜品正在某些桌的订单中，请先清空相应订单再删除'); return; } }
-            menu = menu.filter(function(m) { return m.id !== id; });
+            const id = this.dataset.id;
+            // 检查是否在订单中使用
+            for (let t in tableOrders) {
+                if (tableOrders[t].some(i => i.menuItemId === id)) {
+                    alert('该菜品正在某些桌的订单中，请先清空相应订单再删除');
+                    return;
+                }
+            }
+            menu = menu.filter(m => m.id !== id);
             renderMenuEditor();
         });
     });
 }
 function saveMenuFromModal() {
-    var items = document.querySelectorAll('#menuEditorList .menu-editor-item');
-    var nm = [];
-    var maxId = Math.max.apply(null, menu.map(function(m) { return parseInt(m.id) || 0; }), [0]);
-    items.forEach(function(div) {
-        var name = div.querySelector('.edit-name').value.trim();
-        var price = parseFloat(div.querySelector('.edit-price').value);
+    const items = document.querySelectorAll('#menuEditorList .menu-editor-item');
+    const nm = [];
+    let maxId = Math.max(...menu.map(m => parseInt(m.id) || 0), 0);
+    items.forEach(div => {
+        const name = div.querySelector('.edit-name').value.trim();
+        const price = parseFloat(div.querySelector('.edit-price').value);
+        const category = div.querySelector('.edit-category').value.trim() || '未分类';
         if (!name || isNaN(price) || price < 0) return;
-        var id = div.dataset.id;
-        if (!id || !menu.some(function(m) { return m.id === id; })) { maxId++; id = String(maxId); }
-        nm.push({ id: id, name: name, price: price });
+        let id = div.dataset.id;
+        if (!id || !menu.some(m => m.id === id)) { maxId++; id = String(maxId); }
+        nm.push({ id, name, price, category });
     });
     if (nm.length === 0) { alert('菜单不能为空'); return; }
-    var nids = new Set(nm.map(function(m) { return m.id; }));
-    var conflict = false;
-    for (var t in tableOrders) {
-        var o = tableOrders[t];
-        var orphan = o.filter(function(item) { return !nids.has(item.menuItemId); });
+    // 冲突检查
+    const nids = new Set(nm.map(m => m.id));
+    let conflict = false;
+    for (let t in tableOrders) {
+        const orphan = tableOrders[t].filter(item => !nids.has(item.menuItemId));
         if (orphan.length > 0) {
-            if (!confirm('桌 ' + t + ' 中有菜品"' + orphan.map(function(o) { return o.name; }).join(',') + '"被删除，是否清空该桌订单？')) { conflict = true; break; } else { delete tableOrders[t]; }
+            if (!confirm(`桌 ${t} 中有菜品"${orphan.map(o=>o.name).join(',')}"被删除，是否清空该桌订单？`)) {
+                conflict = true; break;
+            } else { delete tableOrders[t]; }
         }
     }
     if (conflict) return;
@@ -293,22 +635,41 @@ function saveMenuFromModal() {
     renderAll();
 }
 function addNewMenuItem() {
-    var ed = document.getElementById('menuEditorList');
-    var nid = 'temp_' + Date.now();
-    ed.insertAdjacentHTML('beforeend', '<div class="menu-editor-item" data-id="' + nid + '"><input type="text" class="edit-name" placeholder="新菜品" value="新菜"><input type="number" class="edit-price" value="18" step="0.5"><button class="remove-menu-item" data-id="' + nid + '" style="background:#fecaca;padding:8px 14px;">删除</button></div>');
-    ed.querySelectorAll('.remove-menu-item').forEach(function(b) {
-        b.removeEventListener('click', function() {});
-        b.addEventListener('click', function() { var d = this.closest('.menu-editor-item'); if (d) d.remove(); });
+    const ed = document.getElementById('menuEditorList');
+    const nid = 'temp_' + Date.now();
+    ed.insertAdjacentHTML('beforeend', `<div class="menu-editor-item" data-id="${nid}">
+        <input type="text" class="edit-name" placeholder="新菜品" value="新菜" style="flex:2;">
+        <input type="number" class="edit-price" value="18" step="0.5" style="flex:1;">
+        <input type="text" class="edit-category" placeholder="分类" list="category-list" value="未分类" style="flex:1.5;">
+        <button class="remove-menu-item" data-id="${nid}" style="background:#fecaca;padding:8px 14px;">删除</button>
+    </div>`);
+    // 重新绑定新删除按钮
+    ed.querySelectorAll('.remove-menu-item').forEach(b => {
+        b.removeEventListener('click', () => {});
+        b.addEventListener('click', function() {
+            const d = this.closest('.menu-editor-item');
+            if (d) d.remove();
+        });
     });
 }
 function closeModal() { document.getElementById('menuModal').style.display = 'none'; }
-function esc(s) { if (!s) return ''; return s.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
+function esc(s) {
+    if (!s) return '';
+    return s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
+}
+
+// ---------- 事件绑定 ----------
 document.addEventListener('DOMContentLoaded', function() {
-    loadData(); renderAll();
+    loadData();
+    renderAll();
+
     document.getElementById('checkoutBtn').addEventListener('click', checkout);
     document.getElementById('clearOrderBtn').addEventListener('click', clearCurrentTable);
-    document.getElementById('clearAllBillsBtn').addEventListener('click', function() { if (bills.length === 0) return alert('暂无账单'); if (confirm('永久删除所有账单，不可恢复！')) { bills = []; saveBills(); renderAll(); } });
+    document.getElementById('clearAllBillsBtn').addEventListener('click', () => {
+        if (bills.length === 0) return alert('暂无账单');
+        if (confirm('永久删除所有账单，不可恢复！')) { bills = []; saveBills(); renderAll(); }
+    });
     document.getElementById('manageMenuBtn').addEventListener('click', openMenuModal);
     document.getElementById('addMenuItemBtn').addEventListener('click', addNewMenuItem);
     document.getElementById('saveMenuBtn').addEventListener('click', saveMenuFromModal);
@@ -320,20 +681,31 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('confirmCancelBtn').addEventListener('click', confirmCancel);
     document.getElementById('closeCancelModalBtn').addEventListener('click', closeCancelModal);
     document.getElementById('closeReplaceModalBtn').addEventListener('click', closeReplaceModal);
+    document.getElementById('confirmAddItemBtn').addEventListener('click', confirmAddItem);
+    document.getElementById('closeAddItemModalBtn').addEventListener('click', closeAddItemModal);
+
+    // 口味按钮切换
+    document.querySelectorAll('#spicinessGroup .flavor-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#spicinessGroup .flavor-btn').forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+
+    // 点击模态框外部关闭
     window.addEventListener('click', function(e) {
         if (e.target === document.getElementById('menuModal')) closeModal();
         if (e.target === document.getElementById('moveTableModal')) closeMoveModal();
         if (e.target === document.getElementById('cancelModal')) closeCancelModal();
         if (e.target === document.getElementById('replaceModal')) closeReplaceModal();
+        if (e.target === document.getElementById('addItemModal')) closeAddItemModal();
     });
-});
-</script>
 
-<!-- ✅ 注册 Service Worker，实现离线缓存 -->
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
+    // 注册 Service Worker（如已注释可忽略）
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+});
 </script>
 </body>
 </html>
