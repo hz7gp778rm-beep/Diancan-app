@@ -11,13 +11,18 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <style>
         * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
-        body { background: #f2f4f8; margin: 0; padding: 16px; min-height: 100vh; }
-        .app-container { max-width: 1400px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
-        .card { background: white; border-radius: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); padding: 24px; flex: 1 1 0; min-width: 0; }
-        .left-area { flex: 2; min-width: 280px; }
-        .right-area { flex: 3; min-width: 320px; display: flex; flex-direction: column; gap: 20px; }
+        body { background: #f2f4f8; margin: 0; padding: 16px; min-height: 100vh; overflow-x: hidden; }
+        .app-container {
+            max-width: 1400px; margin: 0 auto;
+            display: flex; flex-wrap: nowrap; gap: 20px; align-items: flex-start;
+            min-width: 820px; /* 保证左右并排的最低宽度 */
+        }
+        /* 如需在小屏上水平滚动，可给 body 加 overflow-x: auto; 已用 min-width 保证 */
+        .card { background: white; border-radius: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); padding: 24px; }
+        .left-area { flex: 2; min-width: 300px; }
+        .right-area { flex: 3; min-width: 380px; display: flex; flex-direction: column; gap: 20px; }
         .order-section, .bill-section { width: 100%; }
-        @media (max-width: 1024px) { .app-container { flex-direction: column; } .left-area, .right-area { flex: 1; width: 100%; } }
+
         h2 { font-size: 1.5rem; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #1e293b; }
         .table-selector { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
         .table-btn { background: #eef2ff; border: none; border-radius: 30px; padding: 12px 20px; font-weight: 600; font-size: 1.1rem; cursor: pointer; min-width: 56px; text-align: center; touch-action: manipulation; }
@@ -39,6 +44,7 @@
         button.secondary { background: #e2e8f0; }
         .order-list, .bill-list { list-style: none; margin: 12px 0; padding: 0; max-height: 380px; overflow-y: auto; }
         .order-item, .bill-item { background: #f9f9fc; border-radius: 18px; padding: 14px 18px; margin-bottom: 10px; border-left: 5px solid #2c7a4b; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+        .order-item.extra-item { border-left-color: #8b5cf6; background: #f5f3ff; }
         .bill-item { border-left-color: #3b82f6; flex-direction: column; align-items: stretch; }
         .order-details { display: flex; flex-direction: column; gap: 4px; flex: 1; }
         .order-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
@@ -58,14 +64,18 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; max-width: 560px; width: 92%; border-radius: 32px; padding: 28px; max-height: 90vh; overflow-y: auto; }
         .menu-editor-item { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
-        input, select { padding: 12px 16px; border-radius: 30px; border: 1px solid #ccc; flex: 1; font-size: 1rem; }
+        input, select { padding: 12px 16px; border-radius: 30px; border: 1px solid #ccc; font-size: 1rem; }
         hr { margin: 16px 0; }
         .replace-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 1.05rem; }
         .flavor-group { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
         .flavor-btn { background: #f1f5f9; border: 2px solid transparent; border-radius: 30px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; }
         .flavor-btn.selected { background: #fde68a; border-color: #f59e0b; }
         .modal-input { width: 100%; padding: 12px 16px; border-radius: 30px; border: 1px solid #ccc; margin: 8px 0; font-size: 1rem; }
-        @media (max-width: 820px) { .card { padding: 16px; } .table-btn { padding: 10px 16px; font-size: 1rem; } h2 { font-size: 1.3rem; } }
+        .extra-charge-area { margin-top: 8px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .extra-charge-area input { flex: 1; min-width: 120px; }
+        .extra-charge-area button { padding: 10px 16px; }
+        .quick-amounts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+        .quick-amounts button { padding: 4px 12px; font-size: 0.85rem; border-radius: 20px; background: #e0e7ff; }
     </style>
 </head>
 <body>
@@ -85,6 +95,20 @@
         <div class="order-section card">
             <h2>🛒 当前桌订单 <span id="currentTableDisplay" style="font-size:1.2rem; color:#2c7a4b;">(1号桌)</span></h2>
             <div id="orderItemsList" class="order-list"><div class="empty-msg">暂无点餐</div></div>
+            <!-- 额外加减钱区域 -->
+            <div class="extra-charge-area">
+                <input type="number" id="extraAmount" placeholder="金额，正数加收负数优惠" step="0.1" style="width:180px;">
+                <input type="text" id="extraNote" placeholder="备注（如打包费）" style="width:140px;">
+                <button id="addExtraBtn" class="primary" style="padding:10px 16px;">添加费用</button>
+            </div>
+            <div class="quick-amounts">
+                <span style="font-size:0.85rem; color:#64748b;">快捷金额：</span>
+                <button class="quick-amount" data-amount="5">+5</button>
+                <button class="quick-amount" data-amount="10">+10</button>
+                <button class="quick-amount" data-amount="20">+20</button>
+                <button class="quick-amount" data-amount="-5">-5</button>
+                <button class="quick-amount" data-amount="-10">-10</button>
+            </div>
             <div class="total-row"><span>合计</span><span id="orderTotal">0.00</span></div>
             <div class="action-buttons">
                 <button id="checkoutBtn" class="primary">✅ 记账结账</button>
@@ -102,7 +126,7 @@
     </div>
 </div>
 
-<!-- 添加菜品口味选择模态框 -->
+<!-- 添加菜品口味选择模态框（保持不变） -->
 <div id="addItemModal" class="modal">
     <div class="modal-content">
         <h3>➕ 添加 <span id="addItemName"></span></h3>
@@ -144,19 +168,17 @@ let bills = [];
 let currentTable = '1';
 let currentCategory = 'all';
 let replaceTarget = null;
-let pendingMenuItem = null; // 待添加的菜品信息
+let pendingMenuItem = null;
 
 const SK = { MENU: 'multi_table_menu_v2', TABLE_ORDERS: 'multi_table_orders_v2', BILLS: 'multi_table_bills_v2' };
 
 const DEFAULT_MENU = [
-    // 饮料系列
     { id:'1', name:'饮料1', price:2, category:'饮料系列' },
     { id:'2', name:'饮料2', price:3, category:'饮料系列' },
     { id:'3', name:'饮料3', price:4, category:'饮料系列' },
     { id:'4', name:'饮料4', price:5, category:'饮料系列' },
     { id:'5', name:'饮料5', price:6, category:'饮料系列' },
     { id:'6', name:'饮料6', price:10, category:'饮料系列' },
-    // 海鲜系列
     { id:'7', name:'花甲', price:25, category:'海鲜系列' },
     { id:'8', name:'蛏子', price:35, category:'海鲜系列' },
     { id:'9', name:'钉螺', price:35, category:'海鲜系列' },
@@ -175,7 +197,6 @@ const DEFAULT_MENU = [
     { id:'22', name:'清蒸大闸蟹（大）', price:95, category:'海鲜系列' },
     { id:'23', name:'清蒸生蚝（小5只）', price:30, category:'海鲜系列' },
     { id:'24', name:'清蒸生蚝（大8只）', price:48, category:'海鲜系列' },
-    // 素菜系列
     { id:'25', name:'土豆', price:12, category:'素菜系列' },
     { id:'26', name:'娃娃菜', price:12, category:'素菜系列' },
     { id:'27', name:'黄豆芽', price:12, category:'素菜系列' },
@@ -191,23 +212,19 @@ const DEFAULT_MENU = [
     { id:'37', name:'鸭血豆芽', price:15, category:'素菜系列' },
     { id:'38', name:'土豆粉', price:15, category:'素菜系列' },
     { id:'39', name:'川粉', price:15, category:'素菜系列' },
-    // 肉类系列
     { id:'40', name:'酥肉', price:40, category:'肉类系列' },
     { id:'41', name:'鸡腿', price:30, category:'肉类系列' },
     { id:'42', name:'脆皮肠', price:25, category:'肉类系列' },
     { id:'43', name:'蟹黄包', price:30, category:'肉类系列' },
-    // 面类系列
     { id:'44', name:'方便面', price:2, category:'面类系列' },
     { id:'45', name:'粉丝', price:2, category:'面类系列' },
     { id:'46', name:'烩面', price:2, category:'面类系列' },
     { id:'47', name:'青菜', price:2, category:'面类系列' },
-    // 凉调系列
     { id:'48', name:'芥末黄瓜', price:12, category:'凉调系列' },
     { id:'49', name:'小番茄', price:12, category:'凉调系列' },
     { id:'50', name:'花生米', price:5, category:'凉调系列' }
 ];
 
-// 所有分类（用于标签和编辑器下拉）
 const ALL_CATEGORIES = ['饮料系列','海鲜系列','素菜系列','肉类系列','面类系列','凉调系列'];
 
 function saveMenu() { localStorage.setItem(SK.MENU, JSON.stringify(menu)); }
@@ -237,7 +254,6 @@ function setCurrentOrder(o) {
 }
 function getTableOrder(t) { return tableOrders[t] || []; }
 
-// 分类列表获取
 function getCategories() {
     const cats = new Set(menu.map(i => i.category || '未分类'));
     return Array.from(cats);
@@ -324,10 +340,8 @@ function openAddItemModal(id, name, price) {
     pendingMenuItem = { id, name, price };
     document.getElementById('addItemName').innerText = name;
     document.getElementById('addItemNote').value = '';
-    // 重置口味选择
     const flavorBtns = document.querySelectorAll('#spicinessGroup .flavor-btn');
     flavorBtns.forEach(b => b.classList.remove('selected'));
-    // 默认选中第一个（不辣）
     flavorBtns[0].classList.add('selected');
     document.getElementById('addItemModal').style.display = 'flex';
 }
@@ -343,21 +357,38 @@ function confirmAddItem() {
     const spiciness = selectedFlavor ? selectedFlavor.dataset.spice : '不辣';
     const notes = document.getElementById('addItemNote').value.trim();
     const o = getCurrentOrder();
-    // 不合并不同口味/备注的项，每次都新建一个条目（避免混乱）
     o.push({
         menuItemId: pendingMenuItem.id,
         name: pendingMenuItem.name,
         price: pendingMenuItem.price,
         quantity: 1,
         spiciness: spiciness,
-        notes: notes
+        notes: notes,
+        isExtra: false
     });
     setCurrentOrder(o);
     closeAddItemModal();
     renderAll();
 }
 
-// ---------- 订单渲染 ----------
+// ---------- 额外加减钱功能 ----------
+function addExtraCharge(amount, note) {
+    if (isNaN(amount) || amount === 0) { alert('请输入有效金额（正数加收，负数优惠）'); return; }
+    const o = getCurrentOrder();
+    const name = amount >= 0 ? '额外加收' : '优惠';
+    o.push({
+        menuItemId: null,
+        name: name,
+        price: amount,
+        quantity: 1,
+        spiciness: '',
+        notes: note || '',
+        isExtra: true
+    });
+    setCurrentOrder(o);
+}
+
+// ---------- 订单渲染（含额外费用样式） ----------
 function renderOrder() {
     const c = document.getElementById('orderItemsList');
     const ts = document.getElementById('orderTotal');
@@ -371,22 +402,26 @@ function renderOrder() {
     let html = o.map((item, index) => {
         const sub = item.price * item.quantity;
         total += sub;
-        let flavorHtml = item.spiciness && item.spiciness !== '不辣' ? `<span class="spiciness-badge">🌶 ${esc(item.spiciness)}</span>` : '';
-        let notesHtml = item.notes ? `<span class="notes-text">📝 ${esc(item.notes)}</span>` : '';
-        return `<div class="order-item" data-index="${index}">
+        const isExtra = item.isExtra;
+        let flavorHtml = (!isExtra && item.spiciness && item.spiciness !== '不辣') ? `<span class="spiciness-badge">🌶 ${esc(item.spiciness)}</span>` : '';
+        let notesHtml = (item.notes) ? `<span class="notes-text">📝 ${esc(item.notes)}</span>` : '';
+        const itemClass = isExtra ? 'order-item extra-item' : 'order-item';
+        return `<div class="${itemClass}" data-index="${index}">
             <div class="order-details">
                 <div class="order-title">
-                    <strong>${esc(item.name)}</strong> x ${item.quantity}
+                    <strong>${esc(item.name)}</strong> ${isExtra ? '' : 'x ' + item.quantity}
                     ${flavorHtml}
                 </div>
                 ${notesHtml}
                 <span style="font-weight:bold; margin-top:2px;">¥${sub.toFixed(2)}</span>
             </div>
             <div class="order-controls">
+                ${!isExtra ? `
                 <button class="order-dec" data-index="${index}">−</button>
                 <span style="min-width:32px;text-align:center;font-weight:bold;">${item.quantity}</span>
                 <button class="order-inc" data-index="${index}">+</button>
                 <button class="order-replace" data-index="${index}" style="background:#dbeafe;">🔄</button>
+                ` : ''}
                 <button class="order-remove" data-index="${index}" style="background:#fee2e2;color:#b91c1c;">✖</button>
             </div>
         </div>`;
@@ -401,7 +436,7 @@ function renderOrder() {
 
 function updateQuantity(idx, delta) {
     const o = getCurrentOrder();
-    if (!o[idx]) return;
+    if (!o[idx] || o[idx].isExtra) return; // 额外费用项不可改数量
     const n = o[idx].quantity + delta;
     if (n <= 0) { o.splice(idx, 1); }
     else { o[idx].quantity = n; }
@@ -443,9 +478,9 @@ function renderBills() {
     let html = bills.map(bill => {
         const itemsStr = bill.items.map(it => {
             let extra = '';
-            if (it.spiciness && it.spiciness !== '不辣') extra += ` (${it.spiciness})`;
+            if (!it.isExtra && it.spiciness && it.spiciness !== '不辣') extra += ` (${it.spiciness})`;
             if (it.notes) extra += ` [${it.notes}]`;
-            return it.name + extra + ' x' + it.quantity;
+            return it.name + extra + (it.isExtra ? '' : ' x' + it.quantity);
         }).join('、');
         return `<div class="bill-item">
             <div style="display:flex;justify-content:space-between;width:100%;">
@@ -483,7 +518,7 @@ function clearCurrentTable() {
     }
 }
 
-function openMoveTable() { /* 原逻辑不变 */ 
+function openMoveTable() {
     const o = getCurrentOrder();
     if (!o || o.length === 0) { alert('当前桌没有订单可移动'); return; }
     document.getElementById('moveFromTable').innerText = currentTable;
@@ -499,16 +534,16 @@ function openMoveTable() { /* 原逻辑不变 */
     }
     document.getElementById('moveTableModal').style.display = 'flex';
 }
-function confirmMove() { /* 原逻辑不变 */
+
+function confirmMove() {
     const target = document.getElementById('targetTableSelect').value;
     if (!target) return alert('请选择目标桌号');
     const cur = getCurrentOrder();
     if (!cur || cur.length === 0) { closeMoveModal(); return; }
     let tar = getTableOrder(target).slice();
     cur.forEach(item => {
-        // 简单合并（相同菜品且口味备注相同才合并）
-        const exist = tar.find(t => t.menuItemId === item.menuItemId && t.spiciness === item.spiciness && t.notes === item.notes);
-        if (exist) { exist.quantity += item.quantity; }
+        const exist = tar.find(t => t.menuItemId === item.menuItemId && t.spiciness === item.spiciness && t.notes === item.notes && t.isExtra === item.isExtra);
+        if (exist && !item.isExtra) { exist.quantity += item.quantity; }
         else { tar.push({...item}); }
     });
     tableOrders[target] = tar;
@@ -537,10 +572,10 @@ function confirmCancel() {
 }
 function closeCancelModal() { document.getElementById('cancelModal').style.display = 'none'; }
 
-// ---------- 更换菜品（保留口味备注） ----------
+// ---------- 更换菜品 ----------
 function openReplaceModal(idx) {
     const o = getCurrentOrder();
-    if (!o[idx]) return;
+    if (!o[idx] || o[idx].isExtra) return; // 额外费用不可更换
     replaceTarget = { table: currentTable, index: idx };
     document.getElementById('replaceOldName').innerText = o[idx].name;
     const c = document.getElementById('replaceMenuList');
@@ -563,7 +598,6 @@ function confirmReplace(nid, nname, nprice) {
     o[replaceTarget.index].menuItemId = nid;
     o[replaceTarget.index].name = nname;
     o[replaceTarget.index].price = nprice;
-    // 保留辣度、备注、数量不变
     tableOrders[replaceTarget.table] = o;
     saveTableOrders();
     closeReplaceModal();
@@ -572,7 +606,7 @@ function confirmReplace(nid, nname, nprice) {
 }
 function closeReplaceModal() { document.getElementById('replaceModal').style.display = 'none'; replaceTarget = null; }
 
-// ---------- 管理菜品（支持分类编辑） ----------
+// ---------- 管理菜品 ----------
 function openMenuModal() { renderMenuEditor(); document.getElementById('menuModal').style.display = 'flex'; }
 function renderMenuEditor() {
     const ed = document.getElementById('menuEditorList');
@@ -590,7 +624,6 @@ function renderMenuEditor() {
     ed.querySelectorAll('.remove-menu-item').forEach(b => {
         b.addEventListener('click', function() {
             const id = this.dataset.id;
-            // 检查是否在订单中使用
             for (let t in tableOrders) {
                 if (tableOrders[t].some(i => i.menuItemId === id)) {
                     alert('该菜品正在某些桌的订单中，请先清空相应订单再删除');
@@ -616,7 +649,6 @@ function saveMenuFromModal() {
         nm.push({ id, name, price, category });
     });
     if (nm.length === 0) { alert('菜单不能为空'); return; }
-    // 冲突检查
     const nids = new Set(nm.map(m => m.id));
     let conflict = false;
     for (let t in tableOrders) {
@@ -643,7 +675,6 @@ function addNewMenuItem() {
         <input type="text" class="edit-category" placeholder="分类" list="category-list" value="未分类" style="flex:1.5;">
         <button class="remove-menu-item" data-id="${nid}" style="background:#fecaca;padding:8px 14px;">删除</button>
     </div>`);
-    // 重新绑定新删除按钮
     ed.querySelectorAll('.remove-menu-item').forEach(b => {
         b.removeEventListener('click', () => {});
         b.addEventListener('click', function() {
@@ -692,6 +723,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // 额外加减钱功能
+    document.getElementById('addExtraBtn').addEventListener('click', function() {
+        const amount = parseFloat(document.getElementById('extraAmount').value);
+        const note = document.getElementById('extraNote').value.trim();
+        addExtraCharge(amount, note);
+        document.getElementById('extraAmount').value = '';
+        document.getElementById('extraNote').value = '';
+    });
+
+    // 快捷金额按钮
+    document.querySelectorAll('.quick-amount').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const amount = parseFloat(this.dataset.amount);
+            document.getElementById('extraAmount').value = amount;
+            document.getElementById('extraNote').value = this.innerText + ' 快捷';
+            document.getElementById('addExtraBtn').click();
+        });
+    });
+
     // 点击模态框外部关闭
     window.addEventListener('click', function(e) {
         if (e.target === document.getElementById('menuModal')) closeModal();
@@ -701,10 +751,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target === document.getElementById('addItemModal')) closeAddItemModal();
     });
 
-    // 注册 Service Worker（如已注释可忽略）
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
+    // Service Worker 注册（可注释掉避免旧缓存问题）
+    // if ('serviceWorker' in navigator) {
+    //     navigator.serviceWorker.register('sw.js').catch(() => {});
+    // }
 });
 </script>
 </body>
